@@ -1,0 +1,7 @@
+First, Install the Requirements module by:
+
+pip install -r requirements.txt
+
+then, Run a python file 
+
+python3 web_scanner.py {URL of a Site} Ex:- https://www.example.com
