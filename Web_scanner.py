@@ -1,22 +1,28 @@
 import socket
 import dns.resolver
 import requests
+import re
 from bs4 import BeautifulSoup
+from tqdm import tqdm
+from multiprocessing import Pool
 
 def get_ip_addresses(domain):
     try:
-        ip_addresses = socket.gethostbyname_ex(domain)
-        return ip_addresses[2]
-    except socket.gaierror:
+        ip_addresses = dns.resolver.query(domain, "A")
+        return ip_addresses
+    except dns.resolver.NXDOMAIN:
+        return []
+    except dns.resolver.NoAnswer:
         return []
 
 
 def get_subdomains(domain):
     try:
         subdomains = []
-        answers = dns.resolver.resolve(domain, "CNAME")
+        answers = dns.resolver.query(domain, "ANY")
         for answer in answers:
-            subdomains.append(answer.target.to_text()[:-1])
+            if answer.type == "CNAME":
+                subdomains.append(answer.target.to_text()[:-1])
         return subdomains
     except dns.resolver.NXDOMAIN:
         return []
@@ -28,7 +34,7 @@ def get_social_media_accounts(url):
     social_media_accounts = []
 
     # Example: Extracting Twitter accounts
-    response = requests.get(f"https://twitter.com/{url}")
+    response = requests.get(url)
     if response.status_code == 200:
         soup = BeautifulSoup(response.content, "html.parser")
         twitter_accounts = soup.select("a[data-testid='UserProfileHeader_Items']")
@@ -43,19 +49,19 @@ def get_social_media_accounts(url):
 # Example usage
 target_domain = "example.com"  # Enter the target domain
 
-ip_addresses = get_ip_addresses(target_domain)
+with Pool(4) as pool:
+    ip_addresses = pool.map(get_ip_addresses, subdomains)
+    subdomains = pool.map(get_subdomains, subdomains)
+    social_media_accounts = pool.map(get_social_media_accounts, subdomains)
+
 print(f"IP Addresses for {target_domain}:")
 for ip_address in ip_addresses:
     print(ip_address)
 
-subdomains = get_subdomains(target_domain)
 print(f"\nActive Subdomains for {target_domain}:")
 for subdomain in subdomains:
-    if get_ip_addresses(subdomain):
-        print(subdomain)
+    print(subdomain)
 
 print(f"\nSocial Media Accounts for {target_domain}:")
-for subdomain in subdomains:
-    social_media_accounts = get_social_media_accounts(subdomain)
-    for account in social_media_accounts:
-        print(account)
+for account in social_media_accounts:
+    print(account)
