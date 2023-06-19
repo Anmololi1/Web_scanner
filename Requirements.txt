@@ -1,4 +1,10 @@
 socket
 dns.resolver
 requests
+re
+bs4
+tqdm
+subprocess
 BeautifulSoup
+pool 
+multiprocessing
